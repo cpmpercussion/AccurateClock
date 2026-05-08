@@ -1,21 +1,32 @@
-//
-//  ContentView.swift
-//  AccurateClock
-//
-//  Created by Charles Martin on 9/5/2026.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("secondsStyle") private var secondsStyle: SecondsStyle = .sweep
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(spacing: 32) {
+            TimelineView(.animation) { context in
+                let now = context.date
+                VStack(spacing: 32) {
+                    AnalogClockView(
+                        time: ClockTime(date: now),
+                        secondsStyle: secondsStyle
+                    )
+                    .padding(.horizontal, 24)
+
+                    DigitalClockView(date: now)
+                }
+            }
+
+            Picker("Seconds hand", selection: $secondsStyle) {
+                ForEach(SecondsStyle.allCases) { style in
+                    Text(style.label).tag(style)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
         }
-        .padding()
+        .padding(.vertical)
     }
 }
 

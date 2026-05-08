@@ -1,43 +1,23 @@
-//
-//  AccurateClockUITests.swift
-//  AccurateClockUITests
-//
-//  Created by Charles Martin on 9/5/2026.
-//
-
 import XCTest
 
 final class AccurateClockUITests: XCTestCase {
-
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testDigitalClockShowsHHMMSS() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
-    }
+        let digital = app.descendants(matching: .any)["digital-clock"].firstMatch
+        XCTAssertTrue(digital.waitForExistence(timeout: 5), "digital-clock element not found")
 
-    @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+        let pattern = #"^\d{2}:\d{2}:\d{2}$"#
+        let label = digital.label
+        XCTAssertTrue(
+            NSPredicate(format: "SELF MATCHES %@", pattern).evaluate(with: label),
+            "Digital clock label \(label.debugDescription) does not match HH:MM:SS"
+        )
     }
 }
