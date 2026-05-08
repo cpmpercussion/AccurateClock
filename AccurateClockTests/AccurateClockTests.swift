@@ -86,3 +86,38 @@ struct ClockTimeTests {
         #expect(c.secondAngleSweep < 360)
     }
 }
+
+struct SNTPMathTests {
+    @Test func encodeDecodeRoundTrip() {
+        let original: TimeInterval = 1_762_651_234.567_890_1
+        let encoded = SNTP.encodeTimestamp(unixSeconds: original)
+        let decoded = SNTP.decodeTimestamp(seconds: encoded.seconds, fraction: encoded.fraction)
+        // 32-bit fraction has ~233ps resolution; we should round-trip well under 1µs.
+        #expect(abs(decoded - original) < 1e-6)
+    }
+
+    @Test func ntpEpochOffsetIs70YearsBeforeUnixEpoch() {
+        // 1900 → 1970 is 2208988800 seconds.
+        #expect(SNTP.ntpEpochOffset == 2_208_988_800)
+    }
+
+    @Test func zeroOffsetWhenClocksAlignAndNoDelay() {
+        let result = SNTP.computeOffset(t1: 0, t2: 0, t3: 0, t4: 0)
+        #expect(result.offset == 0)
+        #expect(result.delay == 0)
+    }
+
+    @Test func offsetReflectsServerAheadByFiveSecondsWithSymmetricDelay() {
+        // Server clock is +5s; round-trip is 100ms (50ms each way).
+        let result = SNTP.computeOffset(t1: 0, t2: 5.05, t3: 5.05, t4: 0.1)
+        #expect(abs(result.offset - 5) < 1e-9)
+        #expect(abs(result.delay - 0.1) < 1e-9)
+    }
+
+    @Test func offsetRecoveredEvenWithLargeRoundTripDelay() {
+        // Server +1s; round-trip is 800ms (400ms each way).
+        let result = SNTP.computeOffset(t1: 0, t2: 1.4, t3: 1.4, t4: 0.8)
+        #expect(abs(result.offset - 1) < 1e-9)
+        #expect(abs(result.delay - 0.8) < 1e-9)
+    }
+}
