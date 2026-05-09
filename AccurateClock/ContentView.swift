@@ -10,7 +10,7 @@ struct ContentView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 TimelineView(.animation) { context in
-                    let now = context.date.addingTimeInterval(timeSync.offset)
+                    let now = ScreenshotMode.frozenDate ?? context.date.addingTimeInterval(timeSync.offset)
                     VStack(spacing: 24) {
                         AnalogClockView(
                             time: ClockTime(date: now, calendar: selectedCalendar),
@@ -60,7 +60,11 @@ struct ContentView: View {
                 TimezonePickerView(selectedIdentifier: $timezoneIdentifier)
             }
             .task {
-                await timeSync.sync()
+                if ScreenshotMode.mockSync {
+                    timeSync.mockSyncedState()
+                } else {
+                    await timeSync.sync()
+                }
             }
         }
     }

@@ -34,6 +34,15 @@ final class TimeSyncService {
             self.lastError = (error as? SNTPError)?.userDescription ?? error.localizedDescription
         }
     }
+
+    /// Pre-populate a stable "just synced" state for marketing screenshots,
+    /// avoiding any actual network traffic.
+    func mockSyncedState(roundTripDelay: TimeInterval = 0.012) {
+        self.offset = 0
+        self.roundTripDelay = roundTripDelay
+        self.lastSyncedAt = Date()
+        self.lastError = nil
+    }
 }
 
 // MARK: - SNTP
