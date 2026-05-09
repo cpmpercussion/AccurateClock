@@ -18,8 +18,10 @@ separated.
     - `NSHumanReadableCopyright = Copyright © 2026 Charles Martin. All rights reserved.`
     - `CFBundleDisplayName = Accurate Clock`
 - [x] Xcode scheme shared in `xcshareddata/xcschemes/AccurateClock.xcscheme`.
-- [x] Marketing screenshots generated for iPhone 17 Pro Max (6.9″, 1320×2868)
-      and iPad Pro 13″ (2064×2752) at `submission/screenshots/`.
+- [x] Marketing screenshots generated for the iPhone 6.5″ slot (1284×2778,
+      resized from a 17 Pro Max capture via ImageMagick) and the iPad 13″
+      slot (2064×2752 native), in both light and dark appearance, at
+      `submission/screenshots/<device>/<appearance>/`.
 - [x] Local archive build succeeded — `build/AccurateClock.xcarchive`.
 - [x] GitHub Pages enabled on the repo, sourcing from `docs/`. Privacy
       policy at `docs/privacy.html`.
@@ -92,17 +94,20 @@ Paste from `submission/metadata.md`:
 - What's New: leave blank for first version.
 - App Review Notes: paste from `submission/app_review_notes.md`.
 
-Upload screenshots:
+Upload screenshots — App Store Connect now offers light + dark appearance
+slots per device. Drag the four PNGs in numeric order
+(`01_sweep`, `02_tick`, `03_picker`, `04_tokyo`):
 
-- **iPhone 6.9"** (required): drag the four PNGs from
-  `submission/screenshots/iPhone-17-Pro-Max/` in order
-  (`01_sweep`, `02_tick`, `03_picker`, `04_tokyo`).
-- **iPad 13"** (required for iPad apps): drag the four PNGs from
-  `submission/screenshots/iPad-Pro-13/`.
+- **iPhone 6.5"** (1284×2778, required):
+  - Light: `submission/screenshots/iPhone-6.5/light/`
+  - Dark:  `submission/screenshots/iPhone-6.5/dark/`
+- **iPad 13"** (2064×2752, required for iPad apps):
+  - Light: `submission/screenshots/iPad-Pro-13/light/`
+  - Dark:  `submission/screenshots/iPad-Pro-13/dark/`
 
-Apple will accept these for the smaller iPhone / iPad sizes too — no
-need to generate 6.5″ or 11″ separately unless you want device-specific
-hero shots.
+If App Store Connect only shows a single screenshot slot per device
+(some accounts haven't been migrated to the light/dark split yet), use the
+`light/` set — it's the safer default for users who haven't customised.
 
 ### 6. Pricing
 

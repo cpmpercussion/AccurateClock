@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# Run the MarketingScreenshots UI test on each required device, then extract the
-# screenshot attachments into submission/screenshots/<device>/ with their
-# friendly names (01_sweep.png, 02_tick.png, 03_picker.png, 04_tokyo.png).
+# Run the MarketingScreenshots UI test on each required device, in light AND
+# dark appearance, then extract the screenshots into:
 #
-# Forces the simulator status bar to Apple's marketing-standard "9:41" with full
-# signal/Wi-Fi/battery so the screenshots look intentional.
+#   submission/screenshots/<device>/<appearance>/{01_sweep,02_tick,03_picker,04_tokyo}.png
+#
+# iPhone screenshots are captured on iPhone 17 Pro Max (1320×2868) and resized
+# to the 6.5" App Store slot's 1284×2778 with ImageMagick. iPad keeps the native
+# 13" 2064×2752 size (Apple's iPad 13" slot).
+#
+# The simulator status bar is forced to Apple's marketing-standard "9:41" with
+# full signal/Wi-Fi and a charged battery so the screenshots look intentional.
 #
 # Usage: ./tools/screenshots.sh
 
@@ -12,61 +17,94 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# device-name : output-folder : magick-resize-target (empty = keep native size)
 DEVICES=(
-  "iPhone 17 Pro Max:iPhone-17-Pro-Max"
-  "iPad Pro 13-inch (M5):iPad-Pro-13"
+  "iPhone 17 Pro Max:iPhone-6.5:1284x2778"
+  "iPad Pro 13-inch (M5):iPad-Pro-13:"
 )
+APPEARANCES=(light dark)
+
+# Resolve the first matching simulator UDID — `simctl ui` and `status_bar`
+# reject ambiguous names when multiple devices share one.
+resolve_udid() {
+  local name="$1"
+  xcrun simctl list devices available --json | python3 -c "
+import json, sys
+target = '''$name'''
+data = json.load(sys.stdin)
+for runtime, devs in data['devices'].items():
+    for d in devs:
+        if d['name'] == target:
+            print(d['udid']); sys.exit(0)
+sys.exit(1)
+"
+}
 
 mkdir -p build/screenshots submission/screenshots
 
 for entry in "${DEVICES[@]}"; do
-  sim_name="${entry%%:*}"
-  out_name="${entry##*:}"
-  result_bundle="build/screenshots/${out_name}.xcresult"
-  raw_dir="build/screenshots/extracted/${out_name}"
-  final_dir="submission/screenshots/${out_name}"
+  IFS=':' read -r sim_name out_name resize_target <<<"$entry"
+  udid=$(resolve_udid "$sim_name")
 
-  echo "==> Capturing on ${sim_name}"
-  rm -rf "$result_bundle" "$raw_dir" "$final_dir"
-  mkdir -p "$final_dir"
+  # Wipe per-device output so old layouts (e.g. iPhone-17-Pro-Max) don't linger.
+  rm -rf "submission/screenshots/${out_name}"
 
-  # Boot the simulator (no-op if already booted) and override the status bar.
-  xcrun simctl boot "$sim_name" 2>/dev/null || true
-  xcrun simctl bootstatus "$sim_name" -b >/dev/null
-  xcrun simctl status_bar "$sim_name" override \
-    --time "9:41" \
-    --dataNetwork wifi \
-    --wifiMode active --wifiBars 3 \
-    --cellularMode active --cellularBars 4 \
-    --batteryState charged --batteryLevel 100
+  for appearance in "${APPEARANCES[@]}"; do
+    tag="${out_name}-${appearance}"
+    result_bundle="build/screenshots/${tag}.xcresult"
+    raw_dir="build/screenshots/extracted/${tag}"
+    final_dir="submission/screenshots/${out_name}/${appearance}"
 
-  xcodebuild test \
-    -project AccurateClock.xcodeproj \
-    -scheme AccurateClock \
-    -destination "platform=iOS Simulator,name=${sim_name}" \
-    -only-testing:AccurateClockUITests/MarketingScreenshots \
-    -resultBundlePath "$result_bundle" >/dev/null
+    echo "==> ${sim_name} / ${appearance}"
+    rm -rf "$result_bundle" "$raw_dir"
+    mkdir -p "$final_dir"
 
-  xcrun simctl status_bar "$sim_name" clear
+    xcrun simctl boot "$udid" 2>/dev/null || true
+    xcrun simctl bootstatus "$udid" -b >/dev/null
+    xcrun simctl ui "$udid" appearance "$appearance"
+    xcrun simctl status_bar "$udid" override \
+      --time "9:41" \
+      --dataNetwork wifi \
+      --wifiMode active --wifiBars 3 \
+      --cellularMode active --cellularBars 4 \
+      --batteryState charged --batteryLevel 100
 
-  xcrun xcresulttool export attachments \
-    --path "$result_bundle" \
-    --output-path "$raw_dir" >/dev/null
+    xcodebuild test \
+      -project AccurateClock.xcodeproj \
+      -scheme AccurateClock \
+      -destination "platform=iOS Simulator,id=${udid}" \
+      -only-testing:AccurateClockUITests/MarketingScreenshots \
+      -resultBundlePath "$result_bundle" >/dev/null
 
-  python3 - "$raw_dir" "$final_dir" <<'PY'
+    xcrun simctl status_bar "$udid" clear
+
+    xcrun xcresulttool export attachments \
+      --path "$result_bundle" \
+      --output-path "$raw_dir" >/dev/null
+
+    python3 - "$raw_dir" "$final_dir" <<'PY'
 import json, os, shutil, sys
 
 raw_dir, final_dir = sys.argv[1], sys.argv[2]
 manifest = json.load(open(os.path.join(raw_dir, "manifest.json")))
 for test in manifest:
     for att in test["attachments"]:
-        # suggestedHumanReadableName looks like "01_sweep_0_<uuid>.png" — keep the
-        # leading "NN_label" only.
+        # suggestedHumanReadableName is "01_sweep_0_<uuid>.png" — keep "01_sweep".
         prefix = "_".join(att["suggestedHumanReadableName"].split("_")[:2])
         target = os.path.join(final_dir, prefix + ".png")
         shutil.copy(os.path.join(raw_dir, att["exportedFileName"]), target)
         print(f"  {target}")
 PY
+
+    if [[ -n "$resize_target" ]]; then
+      for f in "$final_dir"/*.png; do
+        magick "$f" -resize "${resize_target}!" "$f"
+      done
+      echo "  resized → ${resize_target}"
+    fi
+  done
+
+  xcrun simctl ui "$udid" appearance light 2>/dev/null || true
 done
 
 echo "Done. Screenshots in submission/screenshots/"
