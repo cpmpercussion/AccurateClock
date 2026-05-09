@@ -2,39 +2,87 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("secondsStyle") private var secondsStyle: SecondsStyle = .sweep
+    @AppStorage("timezoneIdentifier") private var timezoneIdentifier: String = ""
     @State private var timeSync = TimeSyncService()
+    @State private var showingTimezonePicker = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            TimelineView(.animation) { context in
-                let now = context.date.addingTimeInterval(timeSync.offset)
-                VStack(spacing: 32) {
-                    AnalogClockView(
-                        time: ClockTime(date: now),
-                        secondsStyle: secondsStyle
-                    )
-                    .padding(.horizontal, 24)
+        NavigationStack {
+            VStack(spacing: 24) {
+                TimelineView(.animation) { context in
+                    let now = context.date.addingTimeInterval(timeSync.offset)
+                    VStack(spacing: 24) {
+                        AnalogClockView(
+                            time: ClockTime(date: now, calendar: selectedCalendar),
+                            secondsStyle: secondsStyle
+                        )
+                        .padding(.horizontal, 24)
 
-                    DigitalClockView(date: now)
+                        VStack(spacing: 8) {
+                            DigitalClockView(date: now, calendar: selectedCalendar)
+                            if let label = nonLocalLabel {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "globe")
+                                    Text(label)
+                                }
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                Picker("Seconds hand", selection: $secondsStyle) {
+                    ForEach(SecondsStyle.allCases) { style in
+                        Text(style.label).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+
+                TimelineView(.periodic(from: .now, by: 1)) { _ in
+                    SyncStatusRow(timeSync: timeSync)
                 }
             }
-
-            Picker("Seconds hand", selection: $secondsStyle) {
-                ForEach(SecondsStyle.allCases) { style in
-                    Text(style.label).tag(style)
+            .padding(.vertical)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingTimezonePicker = true
+                    } label: {
+                        Image(systemName: timezoneIdentifier.isEmpty ? "globe" : "globe.americas.fill")
+                    }
+                    .accessibilityLabel("Time zone")
+                    .accessibilityIdentifier("timezone-button")
                 }
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-
-            TimelineView(.periodic(from: .now, by: 1)) { _ in
-                SyncStatusRow(timeSync: timeSync)
+            .sheet(isPresented: $showingTimezonePicker) {
+                TimezonePickerView(selectedIdentifier: $timezoneIdentifier)
+            }
+            .task {
+                await timeSync.sync()
             }
         }
-        .padding(.vertical)
-        .task {
-            await timeSync.sync()
-        }
+    }
+
+    private var selectedTimeZone: TimeZone {
+        if timezoneIdentifier.isEmpty { return .current }
+        return TimeZone(identifier: timezoneIdentifier) ?? .current
+    }
+
+    private var selectedCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = selectedTimeZone
+        return calendar
+    }
+
+    private var nonLocalLabel: String? {
+        guard !timezoneIdentifier.isEmpty else { return nil }
+        let zone = selectedTimeZone
+        let liveOffsetMinutes = zone.secondsFromGMT() / 60
+        let offsetLabel = WorldTime.formatUTCOffset(minutes: liveOffsetMinutes)
+        let cityName = WorldTime.city(for: timezoneIdentifier)?.city ?? timezoneIdentifier
+        return "\(cityName) • \(offsetLabel)"
     }
 }
 

@@ -121,3 +121,59 @@ struct SNTPMathTests {
         #expect(abs(result.delay - 0.8) < 1e-9)
     }
 }
+
+struct WorldTimeTests {
+    @Test func tableHas48CitiesPlusUTC() {
+        // Casio AE-1200: "World Time: 48 cities (31 time zones) and Coordinated Universal Time"
+        #expect(WorldTime.cities.count == 49)
+        #expect(WorldTime.cities.filter { $0.code == "UTC" }.count == 1)
+    }
+
+    @Test func everyIdentifierResolvesToATimeZone() {
+        for city in WorldTime.cities {
+            #expect(TimeZone(identifier: city.identifier) != nil, "Bad IANA identifier: \(city.identifier)")
+        }
+    }
+
+    @Test func cityCodesAreUniqueThreeLetterStrings() {
+        let codes = WorldTime.cities.map(\.code)
+        #expect(Set(codes).count == codes.count)
+        for code in codes {
+            #expect(code.count == 3)
+        }
+    }
+
+    @Test func groupedByOffsetProduces31Zones() {
+        // The manual explicitly states "48 cities (31 time zones)".
+        #expect(WorldTime.groupedByOffset.count == 31)
+    }
+
+    @Test func utcOffsetLabelFormatting() {
+        let syd = WorldTime.city(for: "Australia/Sydney")!
+        #expect(syd.utcOffsetLabel == "UTC+10")
+
+        let del = WorldTime.city(for: "Asia/Kolkata")!
+        #expect(del.utcOffsetLabel == "UTC+5:30")
+
+        let ktm = WorldTime.city(for: "Asia/Kathmandu")!
+        #expect(ktm.utcOffsetLabel == "UTC+5:45")
+
+        let yyt = WorldTime.city(for: "America/St_Johns")!
+        #expect(yyt.utcOffsetLabel == "UTC−3:30")
+
+        let utc = WorldTime.city(for: "UTC")!
+        #expect(utc.utcOffsetLabel == "UTC")
+    }
+
+    @Test func formatUTCOffsetCoversArbitraryLiveOffsets() {
+        // Whole hours, both signs, including the zero case.
+        #expect(WorldTime.formatUTCOffset(minutes: 0) == "UTC")
+        #expect(WorldTime.formatUTCOffset(minutes: 60) == "UTC+1")
+        #expect(WorldTime.formatUTCOffset(minutes: -60) == "UTC−1")
+        // Live DST shift — Sydney during AEDT is +11 even though Casio prints +10.
+        #expect(WorldTime.formatUTCOffset(minutes: 11 * 60) == "UTC+11")
+        // Sub-hour offsets.
+        #expect(WorldTime.formatUTCOffset(minutes: 5 * 60 + 45) == "UTC+5:45")
+        #expect(WorldTime.formatUTCOffset(minutes: -(3 * 60 + 30)) == "UTC−3:30")
+    }
+}
