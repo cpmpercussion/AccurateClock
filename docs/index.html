@@ -3,41 +3,405 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Accurate Clock</title>
+<title>Accurate Clock — a clock that actually shows the seconds</title>
+<meta name="description" content="An iOS &amp; iPadOS clock with a clearly visible second hand, SNTP-synced to time.apple.com. Built for setting mechanical watches that hack.">
+<link rel="icon" type="image/png" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <style>
-:root { color-scheme: light dark; }
+:root {
+  --ac-rust: #C84A1F;
+  --ac-rust-deep: #9E3814;
+  --ac-peach: #F4B795;
+  --ac-cream: #F4E4C1;
+  --ac-cream-soft: #FBF3E2;
+  --ac-taupe: #6B5751;
+  --ac-taupe-deep: #4A3A35;
+  --ac-green: #407A54;
+  --ac-green-deep: #2D5A3C;
+  --ac-gold: #FAC652;
+  --ac-gold-deep: #D9A52E;
+}
+
+html, body { background: var(--ac-cream-soft); }
 body {
-  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  max-width: 36rem;
-  margin: 2.5rem auto;
-  padding: 0 1.25rem;
-  color: #222;
-  background: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color: var(--ac-taupe-deep);
+  -webkit-font-smoothing: antialiased;
 }
-@media (prefers-color-scheme: dark) {
-  body { color: #eee; background: #111; }
-  a { color: #6cf; }
+
+a { color: var(--ac-rust); text-decoration: none; }
+a:hover { color: var(--ac-rust-deep); text-decoration: underline; }
+
+.navbar-brand img { height: 32px; width: 32px; border-radius: 7px; }
+.navbar-brand { font-weight: 600; color: var(--ac-taupe-deep); }
+.navbar { background: rgba(251, 243, 226, 0.85); backdrop-filter: saturate(180%) blur(12px); }
+
+.hero {
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(244, 183, 149, 0.55), transparent 60%),
+    radial-gradient(ellipse at 85% 20%, rgba(250, 198, 82, 0.35), transparent 55%),
+    radial-gradient(ellipse at 75% 90%, rgba(64, 122, 84, 0.18), transparent 60%),
+    linear-gradient(180deg, var(--ac-cream) 0%, var(--ac-cream-soft) 100%);
+  padding: 5rem 0 4rem;
+  position: relative;
+  overflow: hidden;
 }
-h1 { font-size: 1.9rem; margin-top: 0; }
-.meta { color: #888; font-size: 0.9em; }
-ul { padding-left: 1.25rem; }
-li { margin-bottom: 0.4rem; }
+.hero h1 .accent {
+  background: linear-gradient(180deg, transparent 62%, rgba(250, 198, 82, 0.55) 62%, rgba(250, 198, 82, 0.55) 92%, transparent 92%);
+  padding: 0 0.15em;
+}
+.hero h1 {
+  font-weight: 800;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  letter-spacing: -0.02em;
+  color: var(--ac-taupe-deep);
+}
+.hero .lead {
+  font-size: 1.2rem;
+  color: var(--ac-taupe);
+  max-width: 32rem;
+}
+.hero-icon {
+  width: clamp(140px, 22vw, 220px);
+  height: auto;
+  border-radius: 22%;
+  box-shadow: 0 20px 50px -10px rgba(106, 87, 81, 0.4),
+              0 6px 16px -4px rgba(106, 87, 81, 0.2);
+}
+
+.btn-rust {
+  background: var(--ac-rust);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(200, 74, 31, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.btn-rust:hover {
+  background: var(--ac-rust-deep);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(200, 74, 31, 0.45);
+}
+.btn-outline-taupe {
+  border: 1.5px solid var(--ac-taupe);
+  color: var(--ac-taupe-deep);
+  font-weight: 600;
+  padding: 0.6rem 1.35rem;
+  border-radius: 999px;
+  background: transparent;
+}
+.btn-outline-taupe:hover {
+  background: var(--ac-taupe-deep);
+  color: var(--ac-cream-soft);
+  border-color: var(--ac-taupe-deep);
+}
+
+.section-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ac-rust);
+}
+.section-title {
+  font-weight: 700;
+  font-size: 2rem;
+  color: var(--ac-taupe-deep);
+  letter-spacing: -0.01em;
+}
+
+.feature-card {
+  background: #fff;
+  border: 1px solid rgba(106, 87, 81, 0.1);
+  border-radius: 18px;
+  padding: 1.5rem;
+  height: 100%;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -12px rgba(106, 87, 81, 0.25);
+}
+.feature-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--ac-peach), var(--ac-rust));
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  margin-bottom: 0.9rem;
+  font-size: 1.2rem;
+}
+.feature-icon.gold  { background: linear-gradient(135deg, #FFE39A, var(--ac-gold-deep)); color: var(--ac-taupe-deep); }
+.feature-icon.green { background: linear-gradient(135deg, #6FAE85, var(--ac-green-deep)); }
+.feature-icon.taupe { background: linear-gradient(135deg, #9C857E, var(--ac-taupe-deep)); }
+.feature-card h3 {
+  font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;
+  color: var(--ac-taupe-deep);
+}
+.feature-card p { font-size: 0.95rem; color: var(--ac-taupe); margin: 0; }
+
+.screens {
+  background: linear-gradient(180deg, var(--ac-cream-soft) 0%, var(--ac-cream) 100%);
+  padding: 4rem 0;
+}
+.screen-frame {
+  background: var(--ac-taupe-deep);
+  border-radius: 32px;
+  padding: 10px;
+  box-shadow: 0 25px 50px -15px rgba(74, 58, 53, 0.45),
+              0 8px 18px -6px rgba(74, 58, 53, 0.25);
+  display: inline-block;
+  max-width: 100%;
+}
+.screen-frame img {
+  border-radius: 24px;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.screen-caption {
+  margin-top: 0.9rem;
+  font-size: 0.92rem;
+  color: var(--ac-taupe);
+  text-align: center;
+}
+.appearance-toggle .btn {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.45rem 1.15rem;
+  font-size: 0.9rem;
+}
+.appearance-toggle .btn-check:checked + .btn {
+  background: var(--ac-taupe-deep);
+  color: var(--ac-cream-soft);
+  border-color: var(--ac-taupe-deep);
+}
+.appearance-toggle .btn-outline-secondary {
+  border-color: rgba(106, 87, 81, 0.35);
+  color: var(--ac-taupe);
+  background: transparent;
+}
+
+.why {
+  padding: 4.5rem 0;
+}
+.quote {
+  border-left: 4px solid var(--ac-green);
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  font-style: italic;
+  color: var(--ac-taupe-deep);
+  background: linear-gradient(90deg, rgba(250, 198, 82, 0.18), transparent 70%);
+  border-radius: 0 8px 8px 0;
+}
+
+.privacy-pill {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: rgba(64, 122, 84, 0.12);
+  color: var(--ac-green-deep);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.privacy-pill::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ac-green);
+  box-shadow: 0 0 0 4px rgba(64, 122, 84, 0.2);
+}
+
+footer {
+  background: var(--ac-taupe-deep);
+  color: var(--ac-cream-soft);
+  padding: 2.5rem 0;
+  margin-top: 3rem;
+}
+footer a { color: var(--ac-peach); }
+footer a:hover { color: #fff; }
+footer .meta { font-size: 0.9rem; opacity: 0.8; }
+
+code {
+  background: rgba(200, 74, 31, 0.08);
+  color: var(--ac-rust-deep);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
 </style>
 </head>
 <body>
-<h1>Accurate Clock</h1>
-<p>An iOS &amp; iPadOS clock that does the one thing iOS&rsquo;s built-in
-Clock app won&rsquo;t: shows you the seconds, clearly. Built for setting
-mechanical watches that hack.</p>
 
-<ul>
-  <li>Sweep or tick second hand</li>
-  <li>Synced against <code>time.apple.com</code> via SNTP</li>
-  <li>48-city world time picker (the Casio AE-1200 set)</li>
-  <li>No accounts. No tracking. No analytics. <a href="privacy.html">Privacy policy</a>.</li>
-</ul>
+<nav class="navbar navbar-expand-md sticky-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="./">
+      <img src="img/icon.png" alt="">
+      <span>Accurate Clock</span>
+    </a>
+    <div class="d-flex gap-3 align-items-center">
+      <a class="d-none d-sm-inline" href="#features">Features</a>
+      <a class="d-none d-sm-inline" href="#screens">Screens</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </div>
+</nav>
 
-<p class="meta">By <a href="https://charlesmartin.au/">Charles Martin</a>.
-Source: <a href="https://github.com/cpmpercussion/AccurateClock">github.com/cpmpercussion/AccurateClock</a>.</p>
+<header class="hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-md-7">
+        <p class="section-eyebrow mb-2">For iPhone &amp; iPad</p>
+        <h1 class="mb-3">A clock that actually shows <span class="accent">the seconds</span>.</h1>
+        <p class="lead mb-4">
+          iOS&rsquo;s built-in Clock app deliberately hides the second hand.
+          Accurate Clock fills the gap &mdash; a clear analogue dial and a
+          precise digital readout, SNTP-synced to <code>time.apple.com</code>,
+          built for setting mechanical watches that hack.
+        </p>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <a class="btn btn-rust" href="https://github.com/cpmpercussion/AccurateClock">View on GitHub</a>
+          <a class="btn btn-outline-taupe" href="#screens">See screenshots</a>
+          <span class="privacy-pill ms-1">No tracking. Ever.</span>
+        </div>
+      </div>
+      <div class="col-md-5 text-center">
+        <img class="hero-icon" src="img/icon.png" alt="Accurate Clock app icon">
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features" class="container py-5">
+  <div class="text-center mb-5">
+    <p class="section-eyebrow mb-2">What it does</p>
+    <h2 class="section-title">Just a clock. A really good clock.</h2>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+      <div class="feature-card">
+        <div class="feature-icon">&#x21BB;</div>
+        <h3>Sweep or tick</h3>
+        <p>Pick a smooth sweeping second hand, or a per-second tick. Whatever matches the watch you&rsquo;re setting.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="feature-card">
+        <div class="feature-icon gold">&#x25CB;</div>
+        <h3>SNTP-synced</h3>
+        <p>One round-trip to <code>time.apple.com</code> on launch, with millisecond-level offset shown so you know what you&rsquo;re looking at.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="feature-card">
+        <div class="feature-icon taupe">&#x2316;</div>
+        <h3>48 cities</h3>
+        <p>The exact city set from the Casio AE-1200 World Time module, sectioned by UTC offset.</p>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="feature-card">
+        <div class="feature-icon green">&#x2713;</div>
+        <h3>Nothing else</h3>
+        <p>No accounts, no analytics, no ads, no trackers. The only network call is the time check.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screens" class="screens">
+  <div class="container">
+    <div class="text-center mb-4">
+      <p class="section-eyebrow mb-2">In use</p>
+      <h2 class="section-title">Light or dark, your call.</h2>
+    </div>
+
+    <div class="text-center mb-4 appearance-toggle">
+      <div class="btn-group" role="group" aria-label="Appearance">
+        <input type="radio" class="btn-check" name="appearance" id="appLight" autocomplete="off" checked>
+        <label class="btn btn-outline-secondary" for="appLight">Light</label>
+        <input type="radio" class="btn-check" name="appearance" id="appDark" autocomplete="off">
+        <label class="btn btn-outline-secondary" for="appDark">Dark</label>
+      </div>
+    </div>
+
+    <div class="row g-4 justify-content-center" id="screenshotGrid">
+      <div class="col-6 col-md-3">
+        <div class="screen-frame"><img data-light="img/screenshots/light/01_sweep.png" data-dark="img/screenshots/dark/01_sweep.png" src="img/screenshots/light/01_sweep.png" alt="Sweeping second hand"></div>
+        <p class="screen-caption">Sweep mode &mdash; smooth analogue motion.</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="screen-frame"><img data-light="img/screenshots/light/02_tick.png" data-dark="img/screenshots/dark/02_tick.png" src="img/screenshots/light/02_tick.png" alt="Ticking second hand"></div>
+        <p class="screen-caption">Tick mode &mdash; one step per second.</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="screen-frame"><img data-light="img/screenshots/light/03_picker.png" data-dark="img/screenshots/dark/03_picker.png" src="img/screenshots/light/03_picker.png" alt="Time zone picker"></div>
+        <p class="screen-caption">Time zone picker &mdash; 48 cities, AE-1200 set.</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="screen-frame"><img data-light="img/screenshots/light/04_tokyo.png" data-dark="img/screenshots/dark/04_tokyo.png" src="img/screenshots/light/04_tokyo.png" alt="Tokyo time"></div>
+        <p class="screen-caption">Non-local zones show a chip with the city.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="why">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <p class="section-eyebrow mb-2">Why this exists</p>
+        <h2 class="section-title mb-3">Setting a watch on the minute.</h2>
+        <p>If you&rsquo;ve ever tried to set a mechanical watch precisely &mdash; pull the
+        crown, line up the minute, and release on the second &mdash; you&rsquo;ve probably
+        noticed iOS won&rsquo;t help. The stock Clock app hides seconds on purpose.</p>
+        <div class="quote">
+          A clock without seconds is a clock you can&rsquo;t set anything else by.
+        </div>
+        <p class="mt-3">Accurate Clock is the smallest possible app that solves
+        this: a clear analogue face, a digital readout with hundredths, and an
+        honest indication of how far off your device clock is from network
+        time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="row align-items-start g-3">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <img src="img/icon.png" alt="" style="width:36px;height:36px;border-radius:8px;">
+          <strong>Accurate Clock</strong>
+        </div>
+        <p class="meta mb-0">By <a href="https://charlesmartin.au/">Charles Martin</a>.
+        Source on <a href="https://github.com/cpmpercussion/AccurateClock">GitHub</a>.</p>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <p class="meta mb-1"><a href="privacy.html">Privacy policy</a></p>
+        <p class="meta mb-0">No accounts. No tracking. No analytics.</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var light = document.getElementById('appLight');
+  var dark  = document.getElementById('appDark');
+  var imgs  = document.querySelectorAll('#screenshotGrid img');
+  function apply(mode) {
+    imgs.forEach(function (img) {
+      img.src = img.getAttribute('data-' + mode);
+    });
+  }
+  light.addEventListener('change', function () { if (light.checked) apply('light'); });
+  dark .addEventListener('change', function () { if (dark .checked) apply('dark'); });
+})();
+</script>
 </body>
 </html>
