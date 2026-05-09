@@ -11,3 +11,10 @@ Wildly, iOS does not make it easy to see a second hand on any default clock!
 I can imagine this app targeting phone as a starting point.
 
 The app doesn't really need any settings. I suppose there could be some kind of drop down to change timezone on the displayed clocks but that's not critical.
+
+The use case for this app:
+
+- setting a watch or clock where you need to know exactly when the minute starts.
+- setting a watch or clock in an alternative time zone.
+- setting a clock very accurately to an NTP server.
+
