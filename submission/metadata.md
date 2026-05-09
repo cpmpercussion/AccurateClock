@@ -32,8 +32,7 @@ Alternatives:
 
 ## Promotional Text (≤170 chars, editable without resubmission)
 
-> A clock that does the one thing iOS won't: shows the seconds, clearly. Sweep
-> or tick. Synced to time.apple.com. Built for setting watches that hack.
+A clock that does the one thing iOS won't: shows the seconds, clearly. Sweep or tick. Synced to time.apple.com. Built for setting watches that hack.
 
 (160 chars)
 
